@@ -31,7 +31,7 @@ The program consists of the following main components:
 
 ## Client Code 
 ```typescript
-  const instruction = await program.methods
+const instruction = await program.methods
     .init(id, amount, price, { tp: {} })
     .accounts({
       user: wallet.publicKey,
@@ -41,19 +41,19 @@ The program consists of the following main components:
     })
     .instruction();
 
-  const tx = new Transaction().add(instruction);
+const tx = new Transaction().add(instruction);
 
-  const signature = await connection.sendTransaction(tx, [wallet]);
+const signature = await connection.sendTransaction(tx, [wallet]);
 ```
 swap tokens 
 ```typescript
-  const pythSolanaReceiver = new PythSolanaReceiver({ connection, wallet });
+const pythSolanaReceiver = new PythSolanaReceiver({ connection, wallet });
 
-  const SOL_PRICE_FEED_ID =
-    "0xef0d8b6fda2ceba41da15d4095d1da392a0d2f8ed0c6c7bc0f4cfac8c280b56d";
+const SOL_PRICE_FEED_ID =
+  "0xef0d8b6fda2ceba41da15d4095d1da392a0d2f8ed0c6c7bc0f4cfac8c280b56d";
 
-  const solUsdPriceFeedAccount = pythSolanaReceiver
-    .getPriceFeedAccountAddress(0, SOL_PRICE_FEED_ID)
+const solUsdPriceFeedAccount = pythSolanaReceiver
+  .getPriceFeedAccountAddress(0, SOL_PRICE_FEED_ID)
     .toBase58();
 
   const instruction = await program.methods
