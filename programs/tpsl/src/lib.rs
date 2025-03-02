@@ -2,6 +2,7 @@ use anchor_lang::prelude::*;
 use anchor_spl::{associated_token::AssociatedToken, token_interface::{Mint, TokenAccount, TokenInterface, TransferChecked, transfer_checked}};
 use anchor_lang::solana_program::{instruction::Instruction, program::invoke_signed};
 use jupiter_aggregator::program::Jupiter;
+use jupiter_amm_interface::Swap as InterfaceSwap;
 
 use std::str::FromStr;
 use pyth_solana_receiver_sdk::price_update::{get_feed_id_from_hex, PriceUpdateV2};
@@ -122,7 +123,10 @@ pub struct Settle<'info> {
     pub user: Signer<'info>,
 
     pub input_mint: InterfaceAccount<'info, Mint>, 
+    pub input_mint_program: Interface<'info, TokenInterface>,
+
     pub output_mint: InterfaceAccount<'info, Mint>,
+    pub output_mint_program: Interface<'info, TokenInterface>,
 
     #[account(
         mut,
@@ -149,12 +153,12 @@ pub struct Settle<'info> {
     )]
     pub user_output_ata: InterfaceAccount<'info, TokenAccount>,
 
+    pub price_update: Account<'info, PriceUpdateV2>,
+
     pub associated_token_program: Program<'info, AssociatedToken>,
     pub token_program: Interface<'info, TokenInterface>,
     pub system_program: Program<'info, System>,
-
-    pub price_update: Account<'info, PriceUpdateV2>,
-    // pub jupiter_program: Program<'info, Jupiter>,
+    pub jupiter_program: Program<'info, Jupiter>,
 }
 
 
@@ -179,18 +183,6 @@ impl Escrow {
     const SIZE: usize = 8 + 32 + 32 + 32 + 8 + 8 + 8 + 1 ; // Discriminator + 3 * Pubkey + u64 + u64 + u64 + OrderType 
 }
 
-#[error_code]
-pub enum ErrorCode {
-    #[msg("Price is below the take profit limit")]
-    PriceTooLow,
-
-    #[msg("Price is above the stop loss limit")]
-    PriceTooHigh,
-
-    #[msg("Invalid order type")]
-    InvalidOrderType
-}
-
 pub fn swap (ctx: Context<Settle>, swap_data: Vec<u8>) {
     let accounts: Vec<AccountMeta> = ctx
         .remaining_accounts
@@ -213,6 +205,14 @@ pub fn swap (ctx: Context<Settle>, swap_data: Vec<u8>) {
 
     let signer_seeds: &[&[&[u8]]] = &[&[b"tspl-escrow", &[ctx.bumps.escrow]]];
 
+    let route_data = Route {
+        route_plan: swap_leg,
+        in_amount: ctx.accounts.escrow.amount,
+        quoted_out_amount: 0,
+        slippage_bps: 0,
+        platform_fee_bps: 0,
+    };
+
     invoke_signed(
     &Instruction {
         program_id: Pubkey::from_str("JUP6LkbZbjS1jKKwapdHNy74zcZ3tLUZoi5QNyVTaV4").unwrap(),
@@ -223,4 +223,33 @@ pub fn swap (ctx: Context<Settle>, swap_data: Vec<u8>) {
     signer_seeds,
     ).unwrap();
 
+}
+
+#[error_code]
+pub enum ErrorCode {
+    #[msg("Price is below the take profit limit")]
+    PriceTooLow,
+
+    #[msg("Price is above the stop loss limit")]
+    PriceTooHigh,
+
+    #[msg("Invalid order type")]
+    InvalidOrderType
+}
+
+
+#[derive(Debug)]
+pub struct RoutePlanStep {
+    pub swap: InterfaceSwap,
+    pub percent: u8,
+    pub input_index: u8,
+    pub output_index: u8,
+}
+
+pub struct Route {
+    pub route_plan: Vec<RoutePlanStep>,
+    pub in_amount: u64,
+    pub quoted_out_amount: u64,
+    pub slippage_bps: u16,
+    pub platform_fee_bps: u8,
 }
