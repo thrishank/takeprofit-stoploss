@@ -1,4 +1,7 @@
 import { PublicKey } from "@solana/web3.js";
+import WebSocket from "ws";
+
+import { PythSolanaReceiver } from "@pythnetwork/pyth-solana-receiver";
 import { Tpsl } from "../target/types/tpsl";
 import IDL from "../target/idl/tpsl.json";
 import fs from "fs";
@@ -26,13 +29,13 @@ const secretKey = Uint8Array.from(JSON.parse(secretKeyString));
 
 const wallet = Keypair.fromSecretKey(secretKey);
 
+const provider = new AnchorProvider(connection, new Wallet(wallet), {});
+const program = new Program<Tpsl>(IDL as Tpsl, provider);
+
+const id = new BN(234);
+
 async function init() {
   // sell USDC to SOL when the price of SOL is greater than 200
-
-  const provider = new AnchorProvider(connection, new Wallet(wallet), {});
-  const program = new Program<Tpsl>(IDL as Tpsl, provider);
-
-  const id = new BN(234);
 
   /* 
   const escrow = PublicKey.findProgramAddressSync(
@@ -70,4 +73,59 @@ async function init() {
   console.log(signature);
 }
 
-init();
+// init();
+
+async function swap_close() {
+  const pythSolanaReceiver = new PythSolanaReceiver({ connection, wallet });
+
+  const SOL_PRICE_FEED_ID =
+    "0xef0d8b6fda2ceba41da15d4095d1da392a0d2f8ed0c6c7bc0f4cfac8c280b56d";
+
+  const solUsdPriceFeedAccount = pythSolanaReceiver
+    .getPriceFeedAccountAddress(0, SOL_PRICE_FEED_ID)
+    .toBase58();
+
+  const instruction = await program.methods
+    .settle(id)
+    .accounts({
+      user: wallet.publicKey,
+      inputMint: input_mint,
+      outputMint: output_mint,
+      priceUpdate: solUsdPriceFeedAccount,
+      tokenProgram: TOKEN_PROGRAM_ID,
+    })
+    .instruction();
+
+  const ws = new WebSocket("wss://stream.binance.com/ws/solusdt@trade");
+
+  ws.on("open", () => {
+    console.log("Connected to Binance SOL/USDT trade stream");
+  });
+
+  ws.on("message", async (data) => {
+    try {
+      const message = JSON.parse(data);
+      console.log(message.p);
+      if (parseFloat(message.p) > 200) {
+        const tx = new Transaction().add(instruction);
+
+        console.log("Sending transaction to swap");
+        const sign = await connection.sendTransaction(tx, [wallet]);
+        console.log("Transaction sent:", sign);
+      }
+    } catch (error) {
+      console.error("Error parsing JSON:", error);
+      console.error("Raw data:", data.toString()); // Log the raw data
+    }
+  });
+
+  ws.on("close", () => {
+    console.log("Disconnected from Binance SOL/USDT trade stream");
+  });
+
+  ws.on("error", (error) => {
+    console.error("WebSocket error:", error);
+  });
+}
+
+swap_close();

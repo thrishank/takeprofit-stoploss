@@ -11,8 +11,6 @@ declare_id!("GyXAGe33zb1WgwrEapbzsct6tPeL713akAzHxojL9zfE");
 
 declare_program!(jupiter_aggregator);
 
-pub const SOL_USDC_FEED: &str = "5mXfTYitRFsWPhdJfp2fc8N6hK8cw6NB5jAYpronQasj";
-
 #[program]
 pub mod tpsl {
 
@@ -60,12 +58,12 @@ pub mod tpsl {
             if price < escrow.price {
                 return Err(ErrorCode::PriceTooLow.into());
             }
-            swap(ctx, vec![0x00]);
+            // swap(ctx, vec![0x00]);
         } else if escrow.order_type == OrderType::SL {
             if price > escrow.price {
                 return Err(ErrorCode::PriceTooHigh.into());
             }
-            swap(ctx, vec![0x01]);
+            // swap(ctx, vec![0x01]);
         } else {
             return Err(ErrorCode::InvalidOrderType.into());
         }
@@ -206,7 +204,7 @@ pub fn swap (ctx: Context<Settle>, swap_data: Vec<u8>) {
     let signer_seeds: &[&[&[u8]]] = &[&[b"tspl-escrow", &[ctx.bumps.escrow]]];
 
     let route_data = Route {
-        route_plan: swap_leg,
+        route_plan,
         in_amount: ctx.accounts.escrow.amount,
         quoted_out_amount: 0,
         slippage_bps: 0,
