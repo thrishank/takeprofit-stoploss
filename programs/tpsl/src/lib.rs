@@ -58,12 +58,12 @@ pub mod tpsl {
             if price < escrow.price {
                 return Err(ErrorCode::PriceTooLow.into());
             }
-            // swap(ctx, vec![0x00]);
+            // swap(ctx, vec![]);
         } else if escrow.order_type == OrderType::SL {
             if price > escrow.price {
                 return Err(ErrorCode::PriceTooHigh.into());
             }
-            // swap(ctx, vec![0x01]);
+            // swap(ctx, vec![]);
         } else {
             return Err(ErrorCode::InvalidOrderType.into());
         }
