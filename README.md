@@ -29,4 +29,72 @@ The program consists of the following main components:
 
 `GyXAGe33zb1WgwrEapbzsct6tPeL713akAzHxojL9zfE`
 
+## Client Code 
+```typescript
+  const instruction = await program.methods
+    .init(id, amount, price, { tp: {} })
+    .accounts({
+      user: wallet.publicKey,
+      inputMint: input_mint,
+      outputMint: output_mint,
+      tokenProgram: TOKEN_PROGRAM_ID,
+    })
+    .instruction();
+
+  const tx = new Transaction().add(instruction);
+
+  const signature = await connection.sendTransaction(tx, [wallet]);
+```
+swap tokens 
+```typescript
+  const pythSolanaReceiver = new PythSolanaReceiver({ connection, wallet });
+
+  const SOL_PRICE_FEED_ID =
+    "0xef0d8b6fda2ceba41da15d4095d1da392a0d2f8ed0c6c7bc0f4cfac8c280b56d";
+
+  const solUsdPriceFeedAccount = pythSolanaReceiver
+    .getPriceFeedAccountAddress(0, SOL_PRICE_FEED_ID)
+    .toBase58();
+
+  const instruction = await program.methods
+    .settle(id)
+    .accounts({
+      user: wallet.publicKey,
+      inputMint: input_mint,
+      outputMint: output_mint,
+      priceUpdate: solUsdPriceFeedAccount,
+      tokenProgram: TOKEN_PROGRAM_ID,
+    })
+    .instruction();
+
+  const ws = new WebSocket("wss://stream.binance.com/ws/solusdt@trade");
+
+  ws.on("open", () => {
+    console.log("Connected to Binance SOL/USDT trade stream");
+  });
+
+  ws.on("message", async (data) => {
+    try {
+      const message = JSON.parse(data);
+      console.log(message.p);
+      if (parseFloat(message.p) > 200) {
+        const tx = new Transaction().add(instruction);
+        console.log("Sending transaction to swap");
+        const sign = await connection.sendTransaction(tx, [wallet]);
+        console.log("Transaction sent:", sign);
+      }
+    } catch (error) {
+      console.error("Error parsing JSON:", error);
+      console.error("Raw data:", data.toString()); // Log the raw data
+    }
+  });
+
+  ws.on("close", () => {
+    console.log("Disconnected from Binance SOL/USDT trade stream");
+  });
+
+  ws.on("error", (error) => {
+    console.error("WebSocket error:", error);
+  });
+```
 
