@@ -1,6 +1,6 @@
 # TPSL - Take Profit Stop Loss Program
 
-This Anchor program allows users to create take profit (TP) and stop loss (SL) orders on the Solana blockchain.It leverages Pyth Network for price feeds and integrates with Jupiter Aggregator for swapping tokens.
+This Anchor program allows users to create take profit (TP) and stop loss (SL) orders on the Solana blockchain. It leverages Pyth Network for price feeds and integrates with Jupiter Aggregator for swapping tokens.
 
 ## Overview
 
@@ -31,7 +31,10 @@ The program consists of the following main components:
 
 ## Client Code
 
+1. Create a Take Profit Order
+
 ```typescript
+// Sell 100 USDC when the price of SOL reaches $200
 const instruction = await program.methods
   .init(id, amount, price, { tp: {} })
   .accounts({
@@ -47,7 +50,7 @@ const tx = new Transaction().add(instruction);
 const signature = await connection.sendTransaction(tx, [wallet]);
 ```
 
-swap tokens
+2. swap tokens
 
 ```typescript
 const pythSolanaReceiver = new PythSolanaReceiver({ connection, wallet });
@@ -82,13 +85,12 @@ ws.on("message", async (data) => {
     console.log(message.p);
     if (parseFloat(message.p) > 200) {
       const tx = new Transaction().add(instruction);
-      console.log("Sending transaction to swap");
-      const sign = await connection.sendTransaction(tx, [wallet]);
-      console.log("Transaction sent:", sign);
+
+      const signature = await connection.sendTransaction(tx, [wallet]);
+      console.log("Transaction sent:", signature);
     }
   } catch (error) {
     console.error("Error parsing JSON:", error);
-    console.error("Raw data:", data.toString()); // Log the raw data
   }
 });
 
