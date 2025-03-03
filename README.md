@@ -34,7 +34,6 @@ The program consists of the following main components:
 1. Create a Take Profit Order
 
 ```typescript
-// Sell 100 USDC when the price of SOL reaches $200
 const instruction = await program.methods
   .init(id, amount, price, { tp: {} })
   .accounts({
@@ -53,6 +52,7 @@ const signature = await connection.sendTransaction(tx, [wallet]);
 2. swap tokens
 
 ```typescript
+// SOL/USDT Example 
 const pythSolanaReceiver = new PythSolanaReceiver({ connection, wallet });
 
 const SOL_PRICE_FEED_ID =
